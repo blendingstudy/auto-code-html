@@ -1,0 +1,17 @@
+1. 게임 초기화 및 설정
+    - initialize_game(map_size): 게임을 초기화하고 초기 설정을 한다
+    - create_snake(initial_length): 초기 뱀을 생성한다
+    - spawn_apple(map_size, snake_body): 맵에 랜덤한 위치에 사과를 생성한다
+2. 게임 상태 업데이트
+    - update_snake_position(snake_body, direction): 뱀의 위치를 업데이트한다
+    - check_collision(snake_head, map_size, snake_body): 뱀이 벽이나 자기 몸에 닿았는지 확인한다
+    - check_apple_collision(snake_head, apple_position): 뱀이 사과를 먹었는지 확인한다
+    - grow_snake(snake_body): 뱀이 사과를 먹었을 때 길이를 늘린다
+    - check_victory(snake_body, map_size): 뱀이 맵 전체를 채웠는지 확인한다
+3. 게임 입력 처리
+    - handle_input(current_direction, input_key): 키보드 입력을 처리하여 뱀의 방향을 변경한다
+4. 게임 렌더링
+    - render_game(map_size, snake_body, apple_position): 게임 상태를 화면에 렌더링한다
+5. 게임 종료
+    - game_over(): 게임 오버 상태를 처리한다
+    - game_victory(): 게임 승리 상태를 처리한다

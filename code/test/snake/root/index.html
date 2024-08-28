@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snake Game</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #000;
+        }
+        canvas {
+            background-color: #fff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    <script>
+        const SnakeGame = {
+            canvas: null,
+            ctx: null,
+            mapSize: 20,
+            tileSize: 20,
+            snake: [],
+            apple: null,
+            direction: 'right',
+            gameInterval: null,
+            snakeImage: new Image(),
+            appleImage: new Image(),
+
+            initialize_game(map_size) {
+                this.mapSize = map_size;
+                this.canvas = document.getElementById('gameCanvas');
+                this.canvas.width = this.mapSize * this.tileSize;
+                this.canvas.height = this.mapSize * this.tileSize;
+                this.ctx = this.canvas.getContext('2d');
+                this.snake = this.create_snake(1);
+                this.apple = this.spawn_apple(this.mapSize, this.snake);
+                this.direction = 'right';
+                document.addEventListener('keydown', (e) => this.handle_input(this.direction, e.key));
+                this.snakeImage.src = 'snake.png';
+                this.appleImage.src = 'apple.png';
+                this.snakeImage.onload = () => {
+                    this.appleImage.onload = () => {
+                        this.gameInterval = setInterval(() => this.game_loop(), 100);
+                    };
+                };
+                this.snakeImage.onerror = () => {
+                    this.snakeImage = null;
+                    this.gameInterval = setInterval(() => this.game_loop(), 100);
+                };
+                this.appleImage.onerror = () => {
+                    this.appleImage = null;
+                    this.gameInterval = setInterval(() => this.game_loop(), 100);
+                };
+            },
+
+            create_snake(initial_length) {
+                return [{ x: Math.floor(this.mapSize / 2), y: Math.floor(this.mapSize / 2) }];
+            },
+
+            spawn_apple(map_size, snake_body) {
+                let apple;
+                do {
+                    apple = {
+                        x: Math.floor(Math.random() * map_size),
+                        y: Math.floor(Math.random() * map_size)
+                    };
+                } while (snake_body.some(segment => segment.x === apple.x && segment.y === apple.y));
+                return apple;
+            },
+
+            update_snake_position(snake_body, direction) {
+                const head = { ...snake_body[0] };
+                switch (direction) {
+                    case 'up': head.y -= 1; break;
+                    case 'down': head.y += 1; break;
+                    case 'left': head.x -= 1; break;
+                    case 'right': head.x += 1; break;
+                }
+                snake_body.unshift(head);
+                snake_body.pop();
+                return snake_body;
+            },
+
+            check_collision(snake_head, map_size, snake_body) {
+                if (snake_head.x < 0 || snake_head.x >= map_size || snake_head.y < 0 || snake_head.y >= map_size) {
+                    return true;
+                }
+                for (let i = 1; i < snake_body.length; i++) {
+                    if (snake_body[i].x === snake_head.x && snake_body[i].y === snake_head.y) {
+                        return true;
+                    }
+                }
+                return false;
+            },
+
+            check_apple_collision(snake_head, apple_position) {
+                return snake_head.x === apple_position.x && snake_head.y === apple_position.y;
+            },
+
+            grow_snake(snake_body) {
+                const tail = { ...snake_body[snake_body.length - 1] };
+                snake_body.push(tail);
+            },
+
+            check_victory(snake_body, map_size) {
+                return snake_body.length === map_size * map_size;
+            },
+
+            handle_input(current_direction, input_key) {
+                switch (input_key) {
+                    case 'ArrowUp':
+                        if (current_direction !== 'down') this.direction = 'up';
+                        break;
+                    case 'ArrowDown':
+                        if (current_direction !== 'up') this.direction = 'down';
+                        break;
+                    case 'ArrowLeft':
+                        if (current_direction !== 'right') this.direction = 'left';
+                        break;
+                    case 'ArrowRight':
+                        if (current_direction !== 'left') this.direction = 'right';
+                        break;
+                }
+            },
+
+            render_game(map_size, snake_body, apple_position) {
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                // Draw apple
+                this.ctx.fillStyle = 'red';
+                this.ctx.beginPath();
+                this.ctx.arc(
+                    apple_position.x * this.tileSize + this.tileSize / 2,
+                    apple_position.y * this.tileSize + this.tileSize / 2,
+                    this.tileSize / 2,
+                    0,
+                    Math.PI * 2
+                );
+                this.ctx.fill();
+                this.ctx.closePath();
+                // Draw apple stem
+                this.ctx.fillStyle = 'brown';
+                this.ctx.fillRect(
+                    apple_position.x * this.tileSize + this.tileSize / 2 - 2,
+                    apple_position.y * this.tileSize + this.tileSize / 2 - this.tileSize / 2 - 4,
+                    4,
+                    8
+                );
+                // Draw snake
+                snake_body.forEach(segment => {
+                    this.ctx.fillStyle = 'green';
+                    this.ctx.beginPath();
+                    this.ctx.arc(
+                        segment.x * this.tileSize + this.tileSize / 2,
+                        segment.y * this.tileSize + this.tileSize / 2,
+                        this.tileSize / 2,
+                        0,
+                        Math.PI * 2
+                    );
+                    this.ctx.fill();
+                    this.ctx.closePath();
+                });
+            },
+
+            game_over() {
+                clearInterval(this.gameInterval);
+                alert('Game Over!');
+                this.initialize_game(this.mapSize);
+            },
+
+            game_victory() {
+                clearInterval(this.gameInterval);
+                alert('You Win!');
+                this.initialize_game(this.mapSize);
+            },
+
+            game_loop() {
+                this.snake = this.update_snake_position(this.snake, this.direction);
+                if (this.check_collision(this.snake[0], this.mapSize, this.snake)) {
+                    this.game_over();
+                    return;
+                }
+                if (this.check_apple_collision(this.snake[0], this.apple)) {
+                    this.grow_snake(this.snake);
+                    this.apple = this.spawn_apple(this.mapSize, this.snake);
+                }
+                if (this.check_victory(this.snake, this.mapSize)) {
+                    this.game_victory();
+                    return;
+                }
+                this.render_game(this.mapSize, this.snake, this.apple);
+            }
+        };
+
+        window.onload = () => {
+            SnakeGame.initialize_game(20);
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rock-Paper-Scissors Game</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin-top: 50px;
+        }
+        .choices {
+            margin: 20px;
+        }
+        .choices button {
+            font-size: 20px;
+            padding: 10px 20px;
+            margin: 10px;
+        }
+        .result {
+            font-size: 24px;
+            margin: 20px;
+        }
+        .play-again {
+            display: none;
+            font-size: 20px;
+            padding: 10px 20px;
+            margin-top: 20px;
+        }
+        .stats {
+            font-size: 20px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Rock-Paper-Scissors Game</h1>
+    <div class="choices">
+        <button onclick="playGame('rock')">Rock</button>
+        <button onclick="playGame('paper')">Paper</button>
+        <button onclick="playGame('scissors')">Scissors</button>
+    </div>
+    <div class="result" id="result"></div>
+    <button class="play-again" id="play-again" onclick="resetGame()">Play Again</button>
+    <div class="stats" id="stats"></div>
+
+    <script>
+        let wins = 0;
+        let losses = 0;
+        let draws = 0;
+
+        function playGame(userChoice) {
+            const choices = ['rock', 'paper', 'scissors'];
+            const computerChoice = choices[Math.floor(Math.random() * choices.length)];
+            let result = '';
+
+            if (userChoice === computerChoice) {
+                result = "It's a draw!";
+                draws++;
+            } else if (
+                (userChoice === 'rock' && computerChoice === 'scissors') ||
+                (userChoice === 'paper' && computerChoice === 'rock') ||
+                (userChoice === 'scissors' && computerChoice === 'paper')
+            ) {
+                result = 'You win!';
+                wins++;
+            } else {
+                result = 'You lose!';
+                losses++;
+            }
+
+            document.getElementById('result').innerText = `You chose ${userChoice}, computer chose ${computerChoice}. ${result}`;
+            document.getElementById('play-again').style.display = 'inline-block';
+            updateStats();
+        }
+
+        function resetGame() {
+            document.getElementById('result').innerText = '';
+            document.getElementById('play-again').style.display = 'none';
+        }
+
+        function updateStats() {
+            const totalGames = wins + losses + draws;
+            const winRate = totalGames ? ((wins / totalGames) * 100).toFixed(2) : 0;
+            document.getElementById('stats').innerText = `Wins: ${wins}, Losses: ${losses}, Draws: ${draws}, Win Rate: ${winRate}%`;
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Manager</title>
+    <style>
+        .container {
+            display: flex;
+            flex-direction: column;
+            max-width: 1200px;
+            margin: auto;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-control {
+            width: 100%;
+            max-width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            resize: none; /* 크기 수정 불가능하게 설정 */
+        }
+        .form-control.textarea-large {
+            height: 100px;
+        }
+        .form-control.medium {
+            height: 40px;
+        }
+        .btn-primary, .btn-secondary {
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .btn-primary {
+            background-color: #007bff;
+        }
+        .btn-primary:hover {
+            background-color: #0056b3;
+        }
+        .btn-secondary {
+            background-color: #6c757d;
+        }
+        .btn-secondary:hover {
+            background-color: #5a6268;
+        }
+        .alert {
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid transparent;
+            border-radius: 4px;
+        }
+        .alert-danger {
+            color: #721c24;
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+        }
+        .alert-success {
+            color: #155724;
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+        }
+        #response-container {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background-color: #f9f9f9;
+        }
+        pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        #status-message {
+            margin-top: 10px;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+        #function-call-chart-container, #modify-function-chart-container, #generate-code-container, #check-webpage-container, #code-modify-container {
+            display: none;
+        }
+        .file-list {
+            list-style-type: none;
+            padding: 0;
+        }
+        .file-list li {
+            cursor: pointer;
+            padding: 5px;
+            border: 1px solid #ccc;
+            margin-bottom: 5px;
+            background-color: #f5f5f5;
+        }
+        .file-list li:hover {
+            background-color: #ddd;
+        }
+        .left-column, .right-column {
+            flex: 1;
+            padding: 10px;
+        }
+        .file-container {
+            display: flex;
+        }
+        .right-column {
+            flex: 3; /* 오른쪽 칸을 더 넓게 설정 */
+        }
+    </style>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            let htmlFilePath = '';
+
+            $('#load-project').click(function() {
+                var accountGuid = $('#account-guid').val();
+                var projectGuid = $('#project-guid').val();
+
+                $.ajax({
+                    url: '/load_project',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({
+                        account_guid: accountGuid,
+                        project_guid: projectGuid
+                    }),
+                    success: function(data) {
+                        if (data.exists) {
+                            var projectData = data.project_data;
+                            $('#project-description').val(projectData.project_description);
+                            $('#flowchart').val(projectData.flowchart);
+                            if (data.function_call_chart) {
+                                $('#response-container').html('<pre>' + data.function_call_chart + '</pre>');
+                                $('#function-call-chart-container, #modify-function-chart-container, #generate-code-container').show();
+                            } else {
+                                $('#function-call-chart-container, #modify-function-chart-container, #generate-code-container').hide();
+                            }
+                            if (data.files) {
+                                displayFileList(data.files);
+                                htmlFilePath = findHtmlFilePath(data.files);
+                                if (htmlFilePath) {
+                                    $('#check-webpage-container').show();
+                                }
+                            }
+                            alert('Project loaded successfully.');
+                        } else {
+                            alert('Project not found.');
+                        }
+                    }
+                });
+            });
+
+            $('#generate-code-form').submit(function(event) {
+                event.preventDefault(); // 폼의 기본 제출 동작을 막습니다.
+
+                var accountGuid = $('#account-guid').val();
+                var projectGuid = $('#project-guid').val();
+                var projectDescription = $('#project-description').val();
+                var flowchart = $('#flowchart').val();
+
+                $('#status-message').text('함수 호출표 만드는중...');
+
+                $.ajax({
+                    url: '/generate_code',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({
+                        account_guid: accountGuid,
+                        project_guid: projectGuid,
+                        project_description: projectDescription,
+                        flowchart: flowchart
+                    }),
+                    success: function(data) {
+                        $('#status-message').text('함수 호출표 생성완료');
+                        $('#response-container').html('<pre>' + data.formatted_response + '</pre>');
+                        $('#function-call-chart-container, #modify-function-chart-container, #generate-code-container').show();
+                    },
+                    error: function() {
+                        $('#status-message').text('오류가 발생했습니다. 다시 시도해주세요.');
+                    }
+                });
+            });
+
+            $('#modify-function-chart-form').submit(function(event) {
+                event.preventDefault(); // 폼의 기본 제출 동작을 막습니다.
+
+                var accountGuid = $('#account-guid').val();
+                var projectGuid = $('#project-guid').val();
+                var modificationPrompt = $('#modification-prompt').val();
+
+                $('#status-message').text('수정된 함수 호출표 요청중...');
+
+                $.ajax({
+                    url: '/modify_function_call_chart',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({
+                        account_guid: accountGuid,
+                        project_guid: projectGuid,
+                        modification_prompt: modificationPrompt
+                    }),
+                    success: function(data) {
+                        $('#status-message').text('함수 호출표 수정완료');
+                        $('#response-container').html('<pre>' + data.formatted_response + '</pre>');
+                        $('#modification-prompt').val(''); // 수정 후 프롬프트 내용을 지움
+                    },
+                    error: function() {
+                        $('#status-message').text('오류가 발생했습니다. 다시 시도해주세요.');
+                    }
+                });
+            });
+
+            $('#generate-project-code').click(function() {
+                var accountGuid = $('#account-guid').val();
+                var projectGuid = $('#project-guid').val();
+
+                $('#status-message').text('프로젝트 코드 생성중...');
+
+                $.ajax({
+                    url: '/generate_project_code',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({
+                        account_guid: accountGuid,
+                        project_guid: projectGuid
+                    }),
+                    success: function(data) {
+                        $('#status-message').text('프로젝트 코드 생성완료');
+                        displayFileList(data.code_structure.Files);
+                        htmlFilePath = data.html_file_path; // Save the HTML file path
+                        if (htmlFilePath) {
+                            $('#check-webpage-container').show(); // Show the button
+                        }
+                    },
+                    error: function() {
+                        $('#status-message').text('오류가 발생했습니다. 다시 시도해주세요.');
+                    }
+                });
+            });
+
+            $('#check-webpage').click(function() {
+                if (htmlFilePath) {
+                    window.open('/code' + htmlFilePath, '_blank');
+                } else {
+                    alert('HTML file not found.');
+                }
+            });
+
+            function displayFileList(files) {
+                var fileListElement = $('#file-list');
+                fileListElement.empty();
+                files.forEach(function(file) {
+                    var listItem = $('<li></li>').text(file.fname);
+                    listItem.data('fileInfo', file);
+                    listItem.click(function() {
+                        var fileInfo = $(this).data('fileInfo');
+                        requestFileCode(fileInfo);
+                    });
+                    fileListElement.append(listItem);
+                });
+            }
+
+            function requestFileCode(fileInfo) {
+                $.ajax({
+                    url: '/get_file_code',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(fileInfo),
+                    success: function(data) {
+                        $('#code-display').val(data.code);
+                        $('#code-display').data('fileInfo', fileInfo); // 파일 정보를 저장
+                        $('#code-modify-container').show(); // Show the code modify container
+                    }
+                });
+            }
+
+            $('#save-file').click(function() {
+                var fileInfo = $('#code-display').data('fileInfo');
+                var updatedCode = $('#code-display').val();
+
+                if (fileInfo) {
+                    fileInfo.code = updatedCode;
+                    $.ajax({
+                        url: '/save_file_code',
+                        method: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify(fileInfo),
+                        success: function(data) {
+                            alert('파일이 저장되었습니다.');
+                        },
+                        error: function() {
+                            alert('파일 저장 중 오류가 발생했습니다.');
+                        }
+                    });
+                }
+            });
+
+            $('#modify-code-form').submit(function(event) {
+                event.preventDefault(); // 폼의 기본 제출 동작을 막습니다.
+
+                var fileInfo = $('#code-display').data('fileInfo');
+                var modificationPrompt = $('#code-modification-prompt').val();
+                var currentCode = $('#code-display').val();
+
+                if (fileInfo && modificationPrompt) {
+                    $('#status-message').text('코드 수정 요청중...');
+
+                    $.ajax({
+                        url: '/modify_code',
+                        method: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify({
+                            file_info: fileInfo,
+                            modification_prompt: modificationPrompt,
+                            current_code: currentCode
+                        }),
+                        success: function(data) {
+                            $('#status-message').text('코드 수정 완료');
+                            $('#code-display').val(data.modified_code);
+                            $('#code-modification-prompt').val(''); // 수정 후 프롬프트 내용을 지움
+                        },
+                        error: function() {
+                            $('#status-message').text('오류가 발생했습니다. 다시 시도해주세요.');
+                        }
+                    });
+                }
+            });
+
+            $('#run-project').click(function() {
+                var accountGuid = $('#account-guid').val();
+                var projectGuid = $('#project-guid').val();
+
+                $('#status-message').text('프로젝트 실행 중...');
+
+                $.ajax({
+                    url: '/run_project',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({
+                        account_guid: accountGuid,
+                        project_guid: projectGuid
+                    }),
+                    success: function(data) {
+                        if (data.error) {
+                            $('#status-message').text('에러: ' + data.error);
+                            var logsHtml = data.logs ? '<pre>' + data.logs.join('\n') + '</pre>' : '';
+                            $('#project-output-container').html('<div class="alert alert-danger">프로젝트 실행 중 오류가 발생했습니다: ' + data.error + logsHtml + '</div>');
+                        } else {
+                            $('#status-message').text('프로젝트 실행 완료');
+                            var doc = $('#project-output')[0].contentDocument || $('#project-output')[0].contentWindow.document;
+                            doc.open();
+                            doc.write(data.html_content);
+                            doc.close();
+                        }
+                    },
+                    error: function(jqXHR, textStatus, errorThrown) {
+                        var errorMessage = jqXHR.responseJSON && jqXHR.responseJSON.error ? jqXHR.responseJSON.error : '알 수 없는 오류가 발생했습니다.';
+                        var logsHtml = jqXHR.responseJSON && jqXHR.responseJSON.logs ? '<pre>' + jqXHR.responseJSON.logs.join('\n') + '</pre>' : '';
+
+                        $('#status-message').text('프로젝트 실행 중 오류가 발생했습니다.');
+                        $('#project-output-container').html('<div class="alert alert-danger">프로젝트 실행 중 오류가 발생했습니다: ' + errorMessage + logsHtml + '</div>');
+                    }
+                });
+            });
+
+            function findHtmlFilePath(files) {
+                for (var i = 0; i < files.length; i++) {
+                    if (files[i].fname.endsWith('.html')) {
+                        return '/' + $('#account-guid').val() + '/' + $('#project-guid').val() + '/' + files[i].path + '/' + files[i].fname;
+                    }
+                }
+                return null;
+            }
+        });
+    </script>
+</head>
+<body>
+    <div class="container">
+        <div class="form-group">
+            <label for="account-guid">Account GUID:</label>
+            <input type="text" id="account-guid" name="account_guid" class="form-control medium" value="test">
+        </div>
+        <div class="form-group">
+            <label for="project-guid">Project GUID:</label>
+            <input type="text" id="project-guid" name="project_guid" class="form-control medium" value="test">
+        </div>
+        <button id="load-project" class="btn btn-secondary">Load Project</button>
+        <form id="generate-code-form">
+            <div class="form-group">
+                <label for="project-description">Project Description:</label>
+                <textarea id="project-description" name="project_description" class="form-control textarea-large" placeholder="Enter the project description...">가위바위보 게임을 만들건데. 사용자가 가위, 바위, 보 중에 하나를 선택하면 컴퓨터가 랜덤으로 하나를 골라서 승패를 결정하게 해줘.</textarea>
+            </div>
+            <div class="form-group">
+                <label for="flowchart">Flowchart:</label>
+                <textarea id="flowchart" name="flowchart" class="form-control textarea-large" placeholder="Enter the flowchart...">1. 사용자가 [가위, 바위, 보] 중에 하나 선택
+2. 컴퓨터가 [가위, 바위, 보] 중에 랜덤으로 하나 선택
+3. 승패를 화면에 출력
+4. 다시하기 버튼을 누르면 다시 1번부터 진행</textarea>
+            </div>
+            <div class="form-group">
+                <button type="submit" class="btn btn-primary">Generate Code</button>
+                <div id="status-message"></div>
+            </div>
+        </form>
+        <div id="response-container"></div>
+        <div id="function-call-chart-container" class="form-group">
+            <h3>Function Call Chart</h3>
+        </div>
+        <div id="modify-function-chart-container" class="form-group">
+            <h3>Modify Function Call Chart</h3>
+            <form id="modify-function-chart-form">
+                <textarea id="modification-prompt" name="modification_prompt" class="form-control textarea-large" placeholder="Enter modification prompt..."></textarea>
+                <div class="form-group">
+                    <button type="submit" class="btn btn-primary">Submit Modification</button>
+                </div>
+            </form>
+            <div id="modification-status-message"></div>
+        </div>
+        <div id="generate-code-container" class="form-group">
+            <button type="button" id="generate-project-code" class="btn btn-primary">Generate Project Code</button>
+        </div>
+
+        <div class="file-container">
+            <div class="left-column">
+                <h2>파일 목록</h2>
+                <ul id="file-list" class="file-list"></ul>
+            </div>
+            <div class="right-column">
+                <h2>코드</h2>
+                <textarea id="code-display" class="form-control" style="height: 600px;"></textarea>
+                <button type="button" id="save-file" class="btn btn-primary">Save</button>
+
+            </div>
+
+        </div>
+    </div>
+    <div id="code-modify-container" class="form-group">
+                <h3>Modify Code</h3>
+                <form id="modify-code-form">
+                    <textarea id="code-modification-prompt" name="code_modification_prompt" class="form-control textarea-large" placeholder="Enter code modification prompt..."></textarea>
+                    <div class="form-group">
+                        <button type="submit" class="btn btn-primary">Submit Code Modification</button>
+                    </div>
+                </form>
+            </div>
+<!--    <div id="check-webpage-container" class="form-group">-->
+<!--        <button type="button" id="check-webpage" class="btn btn-primary"></button>-->
+<!--    </div>-->
+    <div id="run-project-container" class="form-group">
+            <button type="button" id="run-project" class="btn btn-success">웹페이지 확인하기</button>
+    </div>
+    <div id="project-output-container" class="form-group">
+        <h3>Project Output</h3>
+        <iframe id="project-output" style="width: 100%; height: 600px; border: 1px solid #ccc;"></iframe>
+    </div>
+</body>
+</html>
