@@ -1,3 +1,6 @@
+import io
+import sys
+
 from flask import Flask, render_template, request, jsonify, send_from_directory
 from config import Config
 from ai_models import gpt_request_with_retry
@@ -5,6 +8,10 @@ import os
 import json
 import re
 import threading
+
+
+sys.stdout = io.TextIOWrapper(sys.stdout.detach(), encoding='utf-8')
+sys.stderr = io.TextIOWrapper(sys.stderr.detach(), encoding='utf-8')
 
 app = Flask(__name__)
 app.config.from_object(Config)
