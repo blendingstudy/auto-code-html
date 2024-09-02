@@ -95,7 +95,7 @@ def generate_code():
 
     path = f'code/{account_guid}/{project_guid}/project_data.json'
     if os.path.exists(path):
-        with open(path, 'r', encoding='utf-8') as f:
+        with open(path, 'rb') as f:
             project_data = json.load(f)
             existing_description = project_data['project_description']
             is_new_project = False
@@ -143,7 +143,7 @@ def modify_function_call_chart():
     if not os.path.exists(path):
         return jsonify({'error': 'Project not found'}), 404
 
-    with open(path, 'r', encoding='utf-8') as f:
+    with open(path, 'rb') as f:
         project_data = json.load(f)
 
     existing_chart = project_data.get('gpt_request', "")
@@ -176,12 +176,12 @@ def generate_project_code():
     if not os.path.exists(function_call_path):
         return jsonify({'error': 'function call chart not found'}), 404
 
-    with open(path, 'r', encoding='utf-8') as f:
+    with open(path, 'rb') as f:
         project_data = json.load(f)
         project_description = project_data['project_description']
         flowchart = project_data['flowchart']
 
-    with open(function_call_path, 'r', encoding='utf-8') as f:
+    with open(function_call_path, 'rb') as f:
         function_call_chart_content = f.read()
 
     prompt = f"{project_description}\n\n{flowchart}\n\n{function_call_chart_content}\n\n"
@@ -242,7 +242,7 @@ def load_project():
 
     path = f'code/{account_guid}/{project_guid}/project_data.json'
     if os.path.exists(path):
-        with open(path, 'r', encoding='utf-8') as f:
+        with open(path, 'rb') as f:
             project_data = json.load(f)
         function_call_chart = load_function_call_chart()
         files = load_file_list(account_guid, project_guid)
@@ -271,7 +271,7 @@ def get_file_code():
     # 파일 경로 생성
     file_path = f'code/{account_guid}/{project_guid}/{path}/{fname}'
     if os.path.exists(file_path):
-        with open(file_path, 'r', encoding='utf-8') as file:
+        with open(file_path, 'rb') as file:
             code = file.read()
         return jsonify({"code": code})
     else:
@@ -289,7 +289,7 @@ def save_file_code():
 
     # 파일 경로 생성
     file_path = f'code/{account_guid}/{project_guid}/{path}/{fname}'
-    with open(file_path, 'w', encoding='utf-8') as file:
+    with open(file_path, 'wb') as file:
         file.write(code)
     return jsonify({"status": "success"})
 
@@ -328,7 +328,7 @@ def run_project():
     if not os.path.exists(path):
         return jsonify({'error': 'Project not found'}), 404
 
-    with open(path, 'r', encoding='utf-8') as f:
+    with open(path, 'rb') as f:
         project_data = json.load(f)
 
     # HTML 파일 경로 가져오기
@@ -337,7 +337,7 @@ def run_project():
                            if file['fname'].endswith('.html')), None)
 
     if html_file_path and os.path.exists(html_file_path):
-        with open(html_file_path, 'r', encoding='utf-8') as f:
+        with open(html_file_path, 'rb') as f:
             html_content = f.read()
         return jsonify({'html_content': html_content})  # HTML 내용을 직접 반환
     else:
@@ -401,7 +401,7 @@ def save_code_structure(code_structure):
 
     path = f'code/{account_guid}/{project_guid}'
     os.makedirs(path, exist_ok=True)
-    with open(f'{path}/code_structure.json', 'w', encoding='utf-8') as f:
+    with open(f'{path}/code_structure.json', 'wb') as f:
         json.dump(code_structure, f)
 
 
@@ -442,7 +442,7 @@ def save_file(path, fname, content):
 
     full_path = f'code/{account_guid}/{project_guid}/{path}'
     os.makedirs(full_path, exist_ok=True)
-    with open(f'{full_path}/{fname}', 'w', encoding='utf-8') as f:
+    with open(f'{full_path}/{fname}', 'wb') as f:
         f.write(content)
 
 
@@ -469,7 +469,7 @@ def save_function_call_chart(chart):
 
     path = f'code/{account_guid}/{project_guid}'
     os.makedirs(path, exist_ok=True)
-    with open(f'{path}/function_call_chart.txt', 'w', encoding='utf-8') as f:
+    with open(f'{path}/function_call_chart.txt', 'wb') as f:
         f.write(chart)
 
 
@@ -478,7 +478,7 @@ def load_function_call_chart():
 
     path = f'code/{account_guid}/{project_guid}/function_call_chart.txt'
     if os.path.exists(path):
-        with open(path, 'r', encoding='utf-8') as f:
+        with open(path, 'rb') as f:
             return f.read()
     return ""
 
@@ -488,7 +488,7 @@ def save_project_data(project_data):
 
     path = f'code/{account_guid}/{project_guid}'
     os.makedirs(path, exist_ok=True)
-    with open(f'{path}/project_data.json', 'w', encoding='utf-8') as f:
+    with open(f'{path}/project_data.json', 'wb') as f:
         json.dump(project_data, f)
 
 
